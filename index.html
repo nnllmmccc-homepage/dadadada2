@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OGP HTML Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;padding:20px;background:#f3f4f6}</style>
+</head>
+<body class="min-h-screen flex items-start justify-center">
+  <div class="w-full max-w-2xl bg-white rounded-2xl shadow p-6">
+    <h1 class="text-2xl font-bold text-indigo-600 mb-4">OGP HTML ジェネレータ（Discord対応）</h1>
+
+    <p class="text-sm text-gray-600 mb-4">
+      使い方：公開済みの画像URL（例: <code>https://example.com/uploads/cat.jpg</code>）を入力し、
+      「HTML生成」を押すと、Discordが読み取る静的なHTMLファイルをダウンロードできます。
+      ダウンロードしたファイルをあなたのドメインにアップロードして、そのファイルのURLをDiscordに貼ってください。
+    </p>
+
+    <div class="grid gap-3">
+      <label class="text-sm text-gray-700">画像の公開URL（必須）</label>
+      <input id="imgUrl" type="url" placeholder="https://yourdomain.com/uploads/xxxx.jpg"
+             class="w-full border rounded px-3 py-2" />
+
+      <label class="text-sm text-gray-700">タイトル（表示 & OGP）</label>
+      <input id="title" type="text" placeholder="画像タイトル（例：かわいい猫）"
+             class="w-full border rounded px-3 py-2" />
+
+      <label class="text-sm text-gray-700">説明（OGP用）</label>
+      <input id="desc" type="text" placeholder="説明（例：ふわふわの猫）"
+             class="w-full border rounded px-3 py-2" />
+
+      <label class="text-sm text-gray-700">ページファイル名（任意）</label>
+      <input id="filename" type="text" placeholder="例: view-cat.html （指定がなければ view-<timestamp>.html）"
+             class="w-full border rounded px-3 py-2" />
+
+      <div class="flex gap-2 mt-4">
+        <button id="gen" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">HTML生成</button>
+        <button id="preview" class="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300">プレビュー</button>
+      </div>
+
+      <textarea id="out" class="hidden mt-4 w-full h-44 p-3 font-mono text-sm bg-gray-50 border rounded"></textarea>
+
+      <div id="downloadRow" class="hidden mt-3 flex gap-2">
+        <a id="downloadLink" class="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">ダウンロード（.html）</a>
+        <button id="openLink" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">今すぐ新しいタブで開く</button>
+      </div>
+    </div>
+
+    <hr class="my-6" />
+
+    <p class="text-xs text-gray-500">
+      注意：DiscordはHTMLの<meta property="og:image">を読み取ります。ここで生成されるHTMLは<strong>静的</strong>で、
+      Discordがプレビューを取得するためには生成したHTMLファイルをあなたの公開ドメイン（例: <code>https://yourdomain.com/view-cat.html</code>）に置いてください。
+      （data:URIやlocalStorageの中身はDiscordが読めません）
+    </p>
+  </div>
+
+  <script>
+    // Helper: sanitize
+    function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+    // Build static HTML string with OG tags (no JS meta injection)
+    function buildHtml(imgUrl, title, desc){
+      const t = esc(title || '共有画像');
+      const d = esc(desc || '共有された画像です');
+      const i = esc(imgUrl);
+      return `<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>${t}</title>
+  <meta property="og:type" content="article"/>
+  <meta property="og:title" content="${t}"/>
+  <meta property="og:description" content="${d}"/>
+  <meta property="og:image" content="${i}"/>
+  <meta property="og:url" content=""/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="${t}"/>
+  <meta name="twitter:description" content="${d}"/>
+  <meta name="twitter:image" content="${i}"/>
+  <style>body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f3f4f6;margin:0;font-family:Inter,system-ui,Arial}img{max-width:94%;max-height:86vh;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12)}</style>
+</head>
+<body>
+  <img src="${i}" alt="${t}"/>
+</body>
+</html>`;
+    }
+
+    const imgUrlInput = document.getElementById('imgUrl');
+    const titleInput = document.getElementById('title');
+    const descInput = document.getElementById('desc');
+    const fileInputName = document.getElementById('filename');
+    const outTA = document.getElementById('out');
+    const genBtn = document.getElementById('gen');
+    const previewBtn = document.getElementById('preview');
+    const dlRow = document.getElementById('downloadRow');
+    const dlLink = document.getElementById('downloadLink');
+    const openLink = document.getElementById('openLink');
+
+    function makeFilename(proposed){
+      if(proposed && proposed.trim()) return proposed.trim();
+      return 'view-' + Date.now() + '.html';
+    }
+
+    genBtn.addEventListener('click', () => {
+      const url = imgUrlInput.value.trim();
+      if(!url){
+        alert('画像の公開URLを入力してください。');
+        imgUrlInput.focus();
+        return;
+      }
+      // Basic validation for url scheme
+      if(!/^https?:\/\//i.test(url)){
+        if(!confirm('入力されたURLはhttp/httpsではありません。続行しますか？')) return;
+      }
+      const title = titleInput.value.trim();
+      const desc = descInput.value.trim();
+      const html = buildHtml(url, title, desc);
+      outTA.value = html;
+      outTA.classList.remove('hidden');
+      dlRow.classList.remove('hidden');
+
+      // prepare download link
+      const filename = makeFilename(fileInputName.value);
+      const blob = new Blob([html], {type: 'text/html'});
+      const blobUrl = URL.createObjectURL(blob);
+      dlLink.href = blobUrl;
+      dlLink.download = filename;
+      openLink.onclick = () => window.open(blobUrl, '_blank');
+    });
+
+    previewBtn.addEventListener('click', () => {
+      const url = imgUrlInput.value.trim();
+      if(!url){ alert('画像の公開URLを入力してください。'); return; }
+      // Quick in-page preview
+      const win = window.open();
+      win.document.write(buildHtml(url, titleInput.value.trim(), descInput.value.trim()));
+      win.document.close();
+    });
+  </script>
+</body>
+</html>
