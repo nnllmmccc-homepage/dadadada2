@@ -3,246 +3,83 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title id="pageTitle">ImageShare - 画像共有サイト</title>
-
-  <!-- ✅ OGP（Discord/Twitter用） -->
-  <meta property="og:type" content="website" id="ogType">
-  <meta property="og:title" content="ImageShare" id="ogTitle">
-  <meta property="og:description" content="画像共有サイト" id="ogDescription">
-  <meta property="og:image" content="" id="ogImage">
-  <meta property="og:url" content="" id="ogUrl">
-  <meta name="twitter:card" content="summary_large_image" id="twitterCard">
-  <meta name="twitter:image" content="" id="twitterImage">
-  <meta name="twitter:title" content="ImageShare" id="twitterTitle">
-  <meta name="twitter:description" content="画像共有サイト" id="twitterDescription">
-
+  <title>ImageShare - 画像共有</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body {
-      background: linear-gradient(to bottom right, #eef2ff, #e0e7ff);
-      font-family: 'Inter', sans-serif;
-      min-height: 100vh;
-    }
-    .animate-pulse {
-      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: .5; }
-    }
-    .image-view { display: none; }
-    .image-view.active { display: block; }
+    body { background: #f9fafb; font-family: 'Inter', sans-serif; }
+    .hidden { display: none; }
   </style>
 </head>
-<body>
 
-  <!-- ========================= -->
-  <!-- 🏠 メインページ -->
-  <!-- ========================= -->
-  <div id="mainPage" class="max-w-6xl mx-auto p-6">
-    <div class="text-center mb-10">
-      <div class="flex items-center justify-center gap-3 mb-3">
-        <svg class="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
-          <circle cx="8.5" cy="8.5" r="1.5"/>
-          <path d="m21 15-5-5L5 21" stroke-width="2"/>
-        </svg>
-        <h1 class="text-4xl font-bold text-gray-800">ImageShare</h1>
-      </div>
-      <p class="text-gray-600">画像をアップロードして、Discordなどに貼るだけでプレビュー！</p>
-    </div>
+<body class="min-h-screen flex flex-col items-center justify-center p-6">
 
-    <!-- アップロードエリア -->
-    <div class="bg-white rounded-2xl shadow-lg p-8 mb-8">
-      <label class="block cursor-pointer">
-        <input type="file" accept="image/*" id="fileInput" class="hidden">
-        <div class="border-4 border-dashed border-indigo-300 rounded-xl p-12 text-center hover:border-indigo-500 hover:bg-indigo-50 transition-all" id="uploadArea">
-          <svg class="w-16 h-16 mx-auto mb-4 text-indigo-500" id="uploadIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <p class="text-xl font-semibold text-gray-700 mb-2" id="uploadText">クリックして画像を選択</p>
-          <p class="text-sm text-gray-500">PNG, JPG, GIF (最大5MB)</p>
-        </div>
-      </label>
-    </div>
+  <h1 class="text-4xl font-bold text-indigo-700 mb-6">📸 ImageShare</h1>
 
-    <!-- アップロード済み画像 -->
-    <div id="imagesContainer"></div>
-
-    <!-- 空の状態 -->
-    <div id="emptyState" class="text-center py-12 text-gray-500">
-      <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
-        <circle cx="8.5" cy="8.5" r="1.5"/>
-        <path d="m21 15-5-5L5 21" stroke-width="2"/>
+  <div id="uploadSection" class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-lg text-center">
+    <p class="text-gray-600 mb-4">画像をアップロードしてDiscordで共有できます</p>
+    <input type="file" id="fileInput" accept="image/*" class="hidden">
+    <label for="fileInput" id="uploadArea" 
+      class="cursor-pointer border-4 border-dashed border-indigo-300 rounded-xl py-12 block hover:border-indigo-500 hover:bg-indigo-50 transition">
+      <svg class="w-16 h-16 mx-auto text-indigo-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V3m0 9l3-3m-3 3l-3-3" />
       </svg>
-      まだ画像がアップロードされていません
-    </div>
+      <p class="text-lg text-gray-700 font-medium">クリックして画像を選択</p>
+      <p class="text-sm text-gray-500 mt-1">PNG, JPG, GIF (最大5MB)</p>
+    </label>
+    <div id="uploading" class="hidden mt-4 text-gray-500 animate-pulse">アップロード中...</div>
   </div>
 
-  <!-- ========================= -->
-  <!-- 🖼️ 画像閲覧ページ -->
-  <!-- ========================= -->
-  <div id="imageViewPage" class="image-view">
-    <div class="min-h-screen flex items-center justify-center p-4">
-      <div class="max-w-4xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
-        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 flex justify-between items-center">
-          <h1 class="text-2xl font-bold text-white">ImageShare</h1>
-          <button onclick="goHome()" class="text-white bg-white/20 px-4 py-2 rounded-lg hover:bg-white/30 transition">ホームに戻る</button>
-        </div>
-        <div class="p-6">
-          <img id="displayImage" src="" alt="" class="w-full rounded-lg shadow-lg mb-4">
-          <div class="flex justify-between items-center">
-            <div>
-              <p id="displayImageName" class="font-semibold text-lg text-gray-800"></p>
-              <p id="displayImageInfo" class="text-sm text-gray-500"></p>
-            </div>
-            <button onclick="downloadImage()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 transition">ダウンロード</button>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div id="resultSection" class="hidden bg-white shadow-xl rounded-2xl p-8 w-full max-w-lg text-center">
+    <img id="uploadedPreview" src="" alt="アップロード画像" class="rounded-lg mb-4 mx-auto max-h-64 object-contain">
+    <p class="text-gray-700 mb-4">以下のリンクをDiscordに貼ると画像がプレビューされます👇</p>
+    <input type="text" id="shareLink" readonly class="w-full border rounded-lg px-4 py-2 mb-3 text-sm text-gray-700 bg-gray-50">
+    <button onclick="copyLink()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 transition font-medium">コピー</button>
+    <button onclick="location.reload()" class="ml-2 bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition font-medium">別の画像をアップ</button>
   </div>
 
   <script>
-    let images = [];
-    const loadImages = () => {
-      const data = localStorage.getItem("imageShareImages");
-      images = data ? JSON.parse(data) : [];
-      images.sort((a, b) => b.timestamp - a.timestamp);
-      renderImages();
-      routeCheck();
-    };
+    const fileInput = document.getElementById("fileInput");
+    const uploadArea = document.getElementById("uploadArea");
+    const uploadingText = document.getElementById("uploading");
+    const uploadSection = document.getElementById("uploadSection");
+    const resultSection = document.getElementById("resultSection");
+    const uploadedPreview = document.getElementById("uploadedPreview");
+    const shareLink = document.getElementById("shareLink");
 
-    const saveImages = () => localStorage.setItem("imageShareImages", JSON.stringify(images));
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) return alert("画像ファイルを選択してください");
+      if (file.size > 5 * 1024 * 1024) return alert("5MB以下にしてください");
 
-    const formatSize = s => s < 1024 ? s + "B" : s < 1048576 ? (s/1024).toFixed(1) + "KB" : (s/1048576).toFixed(1) + "MB";
-    const genId = () => Math.random().toString(36).substring(2,9);
+      uploadArea.classList.add("hidden");
+      uploadingText.classList.remove("hidden");
 
-    // ==== UI ====
-    function renderImages() {
-      const container = document.getElementById("imagesContainer");
-      const empty = document.getElementById("emptyState");
-      if (images.length === 0) {
-        container.innerHTML = "";
-        empty.style.display = "block";
-        return;
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch("/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        if (!data.success) throw new Error("アップロード失敗");
+
+        uploadingText.classList.add("hidden");
+        resultSection.classList.remove("hidden");
+        uploadSection.classList.add("hidden");
+        uploadedPreview.src = data.url.replace("/view", "");
+        shareLink.value = data.url;
+
+      } catch (err) {
+        alert("エラー: " + err.message);
       }
-      empty.style.display = "none";
-      container.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-lg p-6">
-          <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <path d="m21 15-5-5L5 21" stroke-width="2"/>
-            </svg>
-            アップロード済み画像
-          </h2>
-          <div id="imageGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </div>`;
-      const grid = document.getElementById("imageGrid");
-      images.forEach(img => {
-        const card = document.createElement("div");
-        card.className = "bg-gray-50 rounded-xl overflow-hidden shadow hover:shadow-md transition";
-        card.innerHTML = `
-          <div onclick="viewImage('${img.id}')" class="aspect-video bg-gray-100 overflow-hidden cursor-pointer">
-            <img src="${img.data}" class="w-full h-full object-cover">
-          </div>
-          <div class="p-4">
-            <p class="text-sm font-medium text-gray-700 truncate mb-1">${img.name}</p>
-            <p class="text-xs text-gray-500 mb-3">${formatSize(img.size)} • ${new Date(img.timestamp).toLocaleDateString("ja-JP")}</p>
-            <div class="flex gap-2">
-              <button onclick="copyLink('${img.id}')" class="flex-1 bg-indigo-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-indigo-700">リンクコピー</button>
-              <button onclick="deleteImage('${img.id}')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg hover:bg-red-200">削除</button>
-            </div>
-          </div>`;
-        grid.appendChild(card);
-      });
-    }
-
-    // ==== Routing ====
-    const routeCheck = () => {
-      const id = location.hash.substring(1);
-      if (id) showImage(id);
-      else showMain();
-    };
-
-    const showMain = () => {
-      document.getElementById("mainPage").style.display = "block";
-      document.getElementById("imageViewPage").classList.remove("active");
-      document.title = "ImageShare - 画像共有サイト";
-    };
-
-    const showImage = (id) => {
-      const img = images.find(i => i.id === id);
-      if (!img) return showMain();
-      document.getElementById("mainPage").style.display = "none";
-      document.getElementById("imageViewPage").classList.add("active");
-      document.getElementById("displayImage").src = img.data;
-      document.getElementById("displayImageName").textContent = img.name;
-      document.getElementById("displayImageInfo").textContent = `${formatSize(img.size)} • ${new Date(img.timestamp).toLocaleDateString("ja-JP")}`;
-
-      // ✅ OGP更新（Discord用）
-      document.getElementById("ogImage").setAttribute("content", img.data);
-      document.getElementById("ogTitle").setAttribute("content", img.name);
-      document.getElementById("ogDescription").setAttribute("content", "ImageShareで共有された画像");
-      document.getElementById("ogUrl").setAttribute("content", location.href);
-      document.getElementById("twitterImage").setAttribute("content", img.data);
-      document.getElementById("twitterTitle").setAttribute("content", img.name);
-      document.getElementById("twitterDescription").setAttribute("content", "ImageShareで共有された画像");
-      document.title = img.name + " - ImageShare";
-    };
-
-    const goHome = () => { location.hash = ""; };
-
-    // ==== File Handling ====
-    document.getElementById("fileInput").addEventListener("change", e => {
-      const f = e.target.files[0];
-      if (!f) return;
-      if (!f.type.startsWith("image/")) return alert("画像ファイルを選択してください");
-      if (f.size > 5*1024*1024) return alert("5MB以下にしてください");
-
-      document.getElementById("uploadText").textContent = "アップロード中...";
-      document.getElementById("uploadIcon").classList.add("animate-pulse");
-
-      const r = new FileReader();
-      r.onload = ev => {
-        const img = { id: genId(), data: ev.target.result, name: f.name, size: f.size, timestamp: Date.now() };
-        images.unshift(img);
-        saveImages();
-        renderImages();
-        document.getElementById("uploadText").textContent = "クリックして画像を選択";
-        document.getElementById("uploadIcon").classList.remove("animate-pulse");
-        e.target.value = "";
-      };
-      r.readAsDataURL(f);
     });
 
-    const viewImage = id => location.hash = id;
-    const copyLink = id => {
-      const link = `${location.origin}${location.pathname}#${id}`;
-      navigator.clipboard.writeText(link);
-      alert("リンクをコピーしました ✅");
-    };
-    const deleteImage = id => {
-      if (!confirm("この画像を削除しますか？")) return;
-      images = images.filter(i => i.id !== id);
-      saveImages();
-      renderImages();
-    };
-    const downloadImage = () => {
-      const id = location.hash.substring(1);
-      const img = images.find(i => i.id === id);
-      if (!img) return;
-      const a = document.createElement("a");
-      a.href = img.data;
-      a.download = img.name;
-      a.click();
-    };
-
-    window.addEventListener("hashchange", routeCheck);
-    loadImages();
+    function copyLink() {
+      shareLink.select();
+      document.execCommand("copy");
+      alert("リンクをコピーしました！");
+    }
   </script>
 </body>
 </html>
