@@ -3,75 +3,56 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ImageShare - 画像共有</title>
+  <title>ImageShare - アップロード</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { background: #f9fafb; font-family: 'Inter', sans-serif; }
-    .hidden { display: none; }
-  </style>
 </head>
+<body class="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
+  <h1 class="text-3xl font-bold text-indigo-700 mb-6">📸 ImageShare</h1>
 
-<body class="min-h-screen flex flex-col items-center justify-center p-6">
-
-  <h1 class="text-4xl font-bold text-indigo-700 mb-6">📸 ImageShare</h1>
-
-  <div id="uploadSection" class="bg-white shadow-xl rounded-2xl p-8 w-full max-w-lg text-center">
-    <p class="text-gray-600 mb-4">画像をアップロードしてDiscordで共有できます</p>
+  <div id="uploadBox" class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-lg text-center">
     <input type="file" id="fileInput" accept="image/*" class="hidden">
-    <label for="fileInput" id="uploadArea" 
-      class="cursor-pointer border-4 border-dashed border-indigo-300 rounded-xl py-12 block hover:border-indigo-500 hover:bg-indigo-50 transition">
-      <svg class="w-16 h-16 mx-auto text-indigo-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-          d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V3m0 9l3-3m-3 3l-3-3" />
-      </svg>
+    <label for="fileInput" class="cursor-pointer border-4 border-dashed border-indigo-300 rounded-xl py-12 block hover:bg-indigo-50">
       <p class="text-lg text-gray-700 font-medium">クリックして画像を選択</p>
-      <p class="text-sm text-gray-500 mt-1">PNG, JPG, GIF (最大5MB)</p>
+      <p class="text-sm text-gray-500 mt-1">PNG / JPG / GIF (最大5MB)</p>
     </label>
     <div id="uploading" class="hidden mt-4 text-gray-500 animate-pulse">アップロード中...</div>
   </div>
 
-  <div id="resultSection" class="hidden bg-white shadow-xl rounded-2xl p-8 w-full max-w-lg text-center">
-    <img id="uploadedPreview" src="" alt="アップロード画像" class="rounded-lg mb-4 mx-auto max-h-64 object-contain">
-    <p class="text-gray-700 mb-4">以下のリンクをDiscordに貼ると画像がプレビューされます👇</p>
-    <input type="text" id="shareLink" readonly class="w-full border rounded-lg px-4 py-2 mb-3 text-sm text-gray-700 bg-gray-50">
-    <button onclick="copyLink()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg hover:bg-indigo-700 transition font-medium">コピー</button>
-    <button onclick="location.reload()" class="ml-2 bg-gray-200 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-300 transition font-medium">別の画像をアップ</button>
+  <div id="resultBox" class="hidden bg-white mt-6 p-6 rounded-2xl shadow-lg w-full max-w-lg text-center">
+    <img id="preview" class="max-h-64 mx-auto rounded-lg mb-4 object-contain">
+    <p class="text-gray-700 mb-3">このリンクをDiscordに貼るとプレビューされます👇</p>
+    <input id="shareLink" readonly class="w-full border rounded-lg px-4 py-2 text-sm bg-gray-50 mb-3">
+    <button onclick="copyLink()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg">コピー</button>
   </div>
 
   <script>
     const fileInput = document.getElementById("fileInput");
-    const uploadArea = document.getElementById("uploadArea");
-    const uploadingText = document.getElementById("uploading");
-    const uploadSection = document.getElementById("uploadSection");
-    const resultSection = document.getElementById("resultSection");
-    const uploadedPreview = document.getElementById("uploadedPreview");
+    const uploadBox = document.getElementById("uploadBox");
+    const uploading = document.getElementById("uploading");
+    const resultBox = document.getElementById("resultBox");
+    const preview = document.getElementById("preview");
     const shareLink = document.getElementById("shareLink");
 
     fileInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      if (!file.type.startsWith("image/")) return alert("画像ファイルを選択してください");
       if (file.size > 5 * 1024 * 1024) return alert("5MB以下にしてください");
 
-      uploadArea.classList.add("hidden");
-      uploadingText.classList.remove("hidden");
-
+      uploading.classList.remove("hidden");
       const formData = new FormData();
       formData.append("file", file);
 
-      try {
-        const res = await fetch("/upload", { method: "POST", body: formData });
-        const data = await res.json();
-        if (!data.success) throw new Error("アップロード失敗");
+      const res = await fetch("/upload", { method: "POST", body: formData });
+      const data = await res.json();
 
-        uploadingText.classList.add("hidden");
-        resultSection.classList.remove("hidden");
-        uploadSection.classList.add("hidden");
-        uploadedPreview.src = data.url.replace("/view", "");
+      if (data.success) {
+        uploading.classList.add("hidden");
+        uploadBox.classList.add("hidden");
+        resultBox.classList.remove("hidden");
+        preview.src = data.url.replace("view.html?url=", "");
         shareLink.value = data.url;
-
-      } catch (err) {
-        alert("エラー: " + err.message);
+      } else {
+        alert("アップロード失敗しました。");
       }
     });
 
