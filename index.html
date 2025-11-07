@@ -1,65 +1,108 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ImageShare - アップロード</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Discord OGP Image Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
-  <h1 class="text-3xl font-bold text-indigo-700 mb-6">📸 ImageShare</h1>
 
-  <div id="uploadBox" class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-lg text-center">
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen text-gray-800">
+  <h1 class="text-3xl font-bold mb-4 text-indigo-600">Discord画像リンクメーカー</h1>
+  <p class="mb-6 text-center text-gray-600">画像を選択して、「Discordでサムネ付きリンクを作成」します</p>
+
+  <div class="bg-white p-8 rounded-2xl shadow-md w-full max-w-md text-center">
     <input type="file" id="fileInput" accept="image/*" class="hidden">
-    <label for="fileInput" class="cursor-pointer border-4 border-dashed border-indigo-300 rounded-xl py-12 block hover:bg-indigo-50">
+    <label for="fileInput"
+      class="cursor-pointer border-4 border-dashed border-indigo-300 rounded-xl py-12 block hover:border-indigo-500 hover:bg-indigo-50 transition">
+      <svg class="w-16 h-16 mx-auto text-indigo-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V3m0 9l3-3m-3 3l-3-3" />
+      </svg>
       <p class="text-lg text-gray-700 font-medium">クリックして画像を選択</p>
-      <p class="text-sm text-gray-500 mt-1">PNG / JPG / GIF (最大5MB)</p>
+      <p class="text-sm text-gray-500 mt-1">PNG / JPG / GIF（5MB以下）</p>
     </label>
-    <div id="uploading" class="hidden mt-4 text-gray-500 animate-pulse">アップロード中...</div>
   </div>
 
-  <div id="resultBox" class="hidden bg-white mt-6 p-6 rounded-2xl shadow-lg w-full max-w-lg text-center">
-    <img id="preview" class="max-h-64 mx-auto rounded-lg mb-4 object-contain">
-    <p class="text-gray-700 mb-3">このリンクをDiscordに貼るとプレビューされます👇</p>
-    <input id="shareLink" readonly class="w-full border rounded-lg px-4 py-2 text-sm bg-gray-50 mb-3">
-    <button onclick="copyLink()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg">コピー</button>
+  <div id="result" class="hidden bg-white p-8 rounded-2xl shadow-md w-full max-w-md mt-6 text-center">
+    <h2 class="text-xl font-semibold mb-3 text-indigo-700">生成結果</h2>
+    <img id="preview" class="rounded-lg mb-3 mx-auto max-h-56 object-contain">
+    <p class="text-gray-600 mb-2 text-sm">以下のHTMLをサーバーにアップロードし、そのURLをDiscordに貼ってください。</p>
+    <textarea id="htmlOutput" readonly
+      class="w-full h-40 p-3 text-sm border rounded-md bg-gray-50 font-mono mb-3"></textarea>
+    <button onclick="downloadHTML()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+      HTMLをダウンロード
+    </button>
   </div>
 
   <script>
-    const fileInput = document.getElementById("fileInput");
-    const uploadBox = document.getElementById("uploadBox");
-    const uploading = document.getElementById("uploading");
-    const resultBox = document.getElementById("resultBox");
+    const input = document.getElementById("fileInput");
+    const result = document.getElementById("result");
     const preview = document.getElementById("preview");
-    const shareLink = document.getElementById("shareLink");
+    const htmlOutput = document.getElementById("htmlOutput");
 
-    fileInput.addEventListener("change", async (e) => {
+    input.addEventListener("change", async (e) => {
       const file = e.target.files[0];
-      if (!file) return;
+      if (!file) return alert("画像を選択してください");
       if (file.size > 5 * 1024 * 1024) return alert("5MB以下にしてください");
 
-      uploading.classList.remove("hidden");
-      const formData = new FormData();
-      formData.append("file", file);
+      // 画像をDataURL化（サーバーなしで表示用）
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        preview.src = dataUrl;
+        result.classList.remove("hidden");
 
-      const res = await fetch("/upload", { method: "POST", body: formData });
-      const data = await res.json();
+        const fileName = "discord-image-" + Date.now() + ".html";
 
-      if (data.success) {
-        uploading.classList.add("hidden");
-        uploadBox.classList.add("hidden");
-        resultBox.classList.remove("hidden");
-        preview.src = data.url.replace("view.html?url=", "");
-        shareLink.value = data.url;
-      } else {
-        alert("アップロード失敗しました。");
-      }
+        // DiscordでOGP認識される静的HTMLを生成
+        const html = `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta property="og:title" content="共有画像">
+  <meta property="og:description" content="Discord用画像リンク">
+  <meta property="og:image" content="${dataUrl}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="${dataUrl}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>共有画像</title>
+  <style>
+    body {
+      background: #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <img src="${dataUrl}" alt="共有画像">
+</body>
+</html>`;
+
+        htmlOutput.value = html;
+        htmlOutput.dataset.filename = fileName;
+      };
+      reader.readAsDataURL(file);
     });
 
-    function copyLink() {
-      shareLink.select();
-      document.execCommand("copy");
-      alert("リンクをコピーしました！");
+    function downloadHTML() {
+      const blob = new Blob([htmlOutput.value], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = htmlOutput.dataset.filename || "discord-image.html";
+      a.click();
+      URL.revokeObjectURL(url);
     }
   </script>
 </body>
