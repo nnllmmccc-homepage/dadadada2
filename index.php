@@ -1,8 +1,5 @@
 <?php
-// index.php
-// Single-file ImageShare (upload + OGP view) — put on your domain root.
-// Requirements: PHP 7+, write permission to ./uploads/ (this script will create it if missing).
-// Save as index.php
+
 
 // --- Configuration ---
 $uploadDir = __DIR__ . '/uploads';       // relative uploads folder
