@@ -3,7 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ImageShare - 画像共有サイト</title>
+  <title id="pageTitle">ImageShare - 画像共有サイト</title>
+  
+  <!-- OGP tags for Discord/Twitter embeds -->
+  <meta property="og:type" content="website" id="ogType">
+  <meta property="og:title" content="ImageShare" id="ogTitle">
+  <meta property="og:description" content="画像共有サイト" id="ogDescription">
+  <meta property="og:image" content="" id="ogImage">
+  <meta name="twitter:card" content="summary_large_image" id="twitterCard">
+  <meta name="twitter:image" content="" id="twitterImage">
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .animate-pulse {
@@ -13,10 +22,55 @@
       0%, 100% { opacity: 1; }
       50% { opacity: .5; }
     }
+    .image-view {
+      display: none;
+    }
+    .image-view.active {
+      display: block;
+    }
   </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-  <div class="max-w-6xl mx-auto p-6">
+  
+  <!-- 画像表示ページ -->
+  <div id="imageViewPage" class="image-view">
+    <div class="min-h-screen flex items-center justify-center p-4">
+      <div class="max-w-5xl w-full">
+        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+          <div class="p-6 bg-gradient-to-r from-indigo-600 to-purple-600">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="m21 15-5-5L5 21" stroke-width="2"/>
+                </svg>
+                <h1 class="text-2xl font-bold text-white">ImageShare</h1>
+              </div>
+              <button onclick="goHome()" class="text-white hover:bg-white hover:bg-opacity-20 px-4 py-2 rounded-lg transition-colors">
+                ホームに戻る
+              </button>
+            </div>
+          </div>
+          <div class="p-8">
+            <img id="displayImage" src="" alt="" class="w-full rounded-lg shadow-lg mb-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-lg font-semibold text-gray-800" id="displayImageName"></p>
+                <p class="text-sm text-gray-500" id="displayImageInfo"></p>
+              </div>
+              <button onclick="downloadImage()" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+                ダウンロード
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- メインページ -->
+  <div id="mainPage" class="max-w-6xl mx-auto p-6">
     <!-- ヘッダー -->
     <div class="text-center mb-8">
       <div class="flex items-center justify-center gap-3 mb-2">
@@ -27,7 +81,7 @@
         </svg>
         <h1 class="text-4xl font-bold text-gray-800">ImageShare</h1>
       </div>
-      <p class="text-gray-600">画像をアップロードしてリンクを共有</p>
+      <p class="text-gray-600">画像をアップロードしてDiscordなどで埋め込み表示</p>
     </div>
 
     <!-- アップロードエリア -->
@@ -65,7 +119,82 @@
   <script>
     let images = [];
     let uploading = false;
-    let copiedId = null;
+    let currentImageId = null;
+
+    // URLのハッシュから画像IDを取得
+    function getImageIdFromHash() {
+      return window.location.hash.substring(1);
+    }
+
+    // ホームに戻る
+    function goHome() {
+      window.location.hash = '';
+      checkRoute();
+    }
+
+    // 画像をダウンロード
+    function downloadImage() {
+      const imageId = getImageIdFromHash();
+      const image = images.find(img => img.id === imageId);
+      if (image) {
+        const link = document.createElement('a');
+        link.href = image.data;
+        link.download = image.name;
+        link.click();
+      }
+    }
+
+    // ルーティング処理
+    function checkRoute() {
+      const imageId = getImageIdFromHash();
+      
+      if (imageId) {
+        showImageView(imageId);
+      } else {
+        showMainPage();
+      }
+    }
+
+    // 画像表示ページを表示
+    function showImageView(imageId) {
+      const image = images.find(img => img.id === imageId);
+      
+      if (!image) {
+        showMainPage();
+        return;
+      }
+
+      document.getElementById('mainPage').style.display = 'none';
+      document.getElementById('imageViewPage').classList.add('active');
+      
+      // 画像を表示
+      document.getElementById('displayImage').src = image.data;
+      document.getElementById('displayImage').alt = image.name;
+      document.getElementById('displayImageName').textContent = image.name;
+      document.getElementById('displayImageInfo').textContent = 
+        `${formatFileSize(image.size)} • ${new Date(image.timestamp).toLocaleDateString('ja-JP')}`;
+      
+      // OGPタグを更新
+      document.getElementById('pageTitle').textContent = `${image.name} - ImageShare`;
+      document.getElementById('ogTitle').setAttribute('content', image.name);
+      document.getElementById('ogDescription').setAttribute('content', 'ImageShareで共有された画像');
+      document.getElementById('ogImage').setAttribute('content', image.data);
+      document.getElementById('ogType').setAttribute('content', 'article');
+      document.getElementById('twitterImage').setAttribute('content', image.data);
+    }
+
+    // メインページを表示
+    function showMainPage() {
+      document.getElementById('mainPage').style.display = 'block';
+      document.getElementById('imageViewPage').classList.remove('active');
+      
+      // OGPタグをデフォルトに戻す
+      document.getElementById('pageTitle').textContent = 'ImageShare - 画像共有サイト';
+      document.getElementById('ogTitle').setAttribute('content', 'ImageShare');
+      document.getElementById('ogDescription').setAttribute('content', '画像共有サイト');
+      document.getElementById('ogImage').setAttribute('content', '');
+      document.getElementById('ogType').setAttribute('content', 'website');
+    }
 
     // LocalStorageから画像を読み込み
     function loadImages() {
@@ -75,6 +204,7 @@
         images.sort((a, b) => b.timestamp - a.timestamp);
       }
       renderImages();
+      checkRoute();
     }
 
     // LocalStorageに保存
@@ -126,7 +256,7 @@
         const card = document.createElement('div');
         card.className = 'bg-gray-50 rounded-xl overflow-hidden shadow hover:shadow-md transition-shadow';
         card.innerHTML = `
-          <div class="aspect-video bg-gray-200 flex items-center justify-center overflow-hidden">
+          <div class="aspect-video bg-gray-200 flex items-center justify-center overflow-hidden cursor-pointer" onclick="viewImage('${image.id}')">
             <img src="${image.data}" alt="${image.name}" class="w-full h-full object-cover">
           </div>
           <div class="p-4">
@@ -154,6 +284,11 @@
         `;
         grid.appendChild(card);
       });
+    }
+
+    // 画像を表示
+    function viewImage(imageId) {
+      window.location.hash = imageId;
     }
 
     // リンクをコピー
@@ -224,6 +359,9 @@
 
       reader.readAsDataURL(file);
     });
+
+    // ハッシュ変更を監視
+    window.addEventListener('hashchange', checkRoute);
 
     // 初期化
     loadImages();
