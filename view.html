@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>共有画像 - ImageShare</title>
+
+  <script>
+    const p = new URLSearchParams(location.search);
+    const image = p.get("url") || "";
+    const title = decodeURIComponent(p.get("title") || "共有画像");
+    const desc = "ImageShareで共有された画像";
+
+    document.write(`
+      <meta property="og:type" content="article">
+      <meta property="og:title" content="${title}">
+      <meta property="og:description" content="${desc}">
+      <meta property="og:image" content="${image}">
+      <meta property="og:url" content="${location.href}">
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:image" content="${image}">
+      <meta name="twitter:title" content="${title}">
+      <meta name="twitter:description" content="${desc}">
+    `);
+  </script>
+
+  <style>
+    body {
+      background: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    img {
+      max-width: 90%;
+      max-height: 80vh;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <img id="mainImage" alt="共有画像">
+  <script>
+    document.getElementById("mainImage").src = new URLSearchParams(location.search).get("url");
+  </script>
+</body>
+</html>
