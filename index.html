@@ -3,21 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title id="pageTitle">ImageShare - 画像共有サイト</title>
+  <title id="pageTitle">ImageShare</title>
   
-  <!-- OGP tags for Discord/Twitter embeds -->
+  <!-- Discord embed tags -->
   <meta property="og:type" content="website" id="ogType">
-  <meta property="og:title" content="ImageShare" id="ogTitle">
-  <meta property="og:description" content="" id="ogDescription">
+  <meta property="og:site_name" content="ImageShare">
+  <meta property="og:title" content="" id="ogTitle">
   <meta property="og:image" content="" id="ogImage">
-  <meta property="og:image:type" content="image/png" id="ogImageType">
-  <meta property="og:image:width" content="1200" id="ogImageWidth">
-  <meta property="og:image:height" content="630" id="ogImageHeight">
-  <meta name="twitter:card" content="summary_large_image" id="twitterCard">
+  <meta property="og:image:type" content="" id="ogImageType">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="" id="twitterImage">
+  <meta name="theme-color" content="#5865F2" id="themeColor">
   
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    body.image-only-mode {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    body.image-only-mode #mainContent {
+      display: none;
+    }
+    body.image-only-mode #imageOnlyView {
+      display: block;
+      width: 100%;
+      height: 100vh;
+    }
+    #imageOnlyView {
+      display: none;
+    }
+    #imageOnlyView img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
     .animate-pulse {
       animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
@@ -27,128 +51,88 @@
     }
   </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+<body>
   
-  <div class="max-w-6xl mx-auto p-6">
-    <!-- ヘッダー -->
-    <div class="text-center mb-8">
-      <div class="flex items-center justify-center gap-3 mb-2">
-        <svg class="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="8.5" cy="8.5" r="1.5"/>
-          <path d="m21 15-5-5L5 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <h1 class="text-4xl font-bold text-gray-800">ImageShare</h1>
-      </div>
-      <p class="text-gray-600">画像をアップロードしてDiscordで埋め込み表示</p>
-    </div>
+  <!-- 画像のみ表示モード（Discord埋め込み用） -->
+  <div id="imageOnlyView">
+    <img id="embedImage" src="" alt="">
+  </div>
 
-    <!-- 注意書き -->
-    <div id="imageViewBanner" class="bg-indigo-600 text-white rounded-xl p-6 mb-8 hidden">
-      <div class="flex items-start gap-4">
-        <svg class="w-6 h-6 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10" stroke-width="2"/>
-          <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <div>
-          <h3 class="font-bold text-lg mb-2">画像表示モード</h3>
-          <p class="text-indigo-100 mb-3">このページは画像を表示しています。Discord等にこのURLを貼ると画像が埋め込み表示されます。</p>
-          <button onclick="goHome()" class="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50 transition-colors">
-            ホームに戻る
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 画像表示エリア（画像ID指定時） -->
-    <div id="imageDisplay" class="bg-white rounded-2xl shadow-2xl overflow-hidden mb-8 hidden">
-      <div class="aspect-video bg-gray-900 flex items-center justify-center">
-        <img id="displayedImage" src="" alt="" class="max-w-full max-h-full object-contain">
-      </div>
-      <div class="p-6">
-        <div class="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-1" id="displayedImageName"></h2>
-            <p class="text-sm text-gray-500" id="displayedImageInfo"></p>
-          </div>
-          <button onclick="downloadCurrentImage()" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            ダウンロード
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- アップロードエリア -->
-    <div id="uploadSection" class="bg-white rounded-2xl shadow-lg p-8 mb-8">
-      <label class="block cursor-pointer">
-        <input type="file" accept="image/*" id="fileInput" class="hidden">
-        <div class="border-4 border-dashed border-indigo-300 rounded-xl p-12 text-center hover:border-indigo-500 hover:bg-indigo-50 transition-all" id="uploadArea">
-          <svg class="w-16 h-16 mx-auto mb-4 text-indigo-500" id="uploadIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- メインコンテンツ -->
+  <div id="mainContent" class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="max-w-6xl mx-auto p-6">
+      <!-- ヘッダー -->
+      <div class="text-center mb-8">
+        <div class="flex items-center justify-center gap-3 mb-2">
+          <svg class="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <path d="m21 15-5-5L5 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <p class="text-xl font-semibold text-gray-700 mb-2" id="uploadText">
-            クリックして画像を選択
-          </p>
-          <p class="text-sm text-gray-500">
-            PNG, JPG, GIF (最大5MB)
-          </p>
+          <h1 class="text-4xl font-bold text-gray-800">ImageShare</h1>
         </div>
-      </label>
-    </div>
+        <p class="text-gray-600">画像をアップロードしてDiscordで直接表示</p>
+      </div>
 
-    <!-- 使い方ガイド -->
-    <div id="guideSection" class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl shadow-lg p-8 mb-8 text-white">
-      <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
-        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- アップロードエリア -->
+      <div class="bg-white rounded-2xl shadow-lg p-8 mb-8">
+        <label class="block cursor-pointer">
+          <input type="file" accept="image/*" id="fileInput" class="hidden">
+          <div class="border-4 border-dashed border-indigo-300 rounded-xl p-12 text-center hover:border-indigo-500 hover:bg-indigo-50 transition-all">
+            <svg class="w-16 h-16 mx-auto mb-4 text-indigo-500" id="uploadIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p class="text-xl font-semibold text-gray-700 mb-2" id="uploadText">
+              クリックして画像を選択
+            </p>
+            <p class="text-sm text-gray-500">
+              PNG, JPG, GIF (最大5MB)
+            </p>
+          </div>
+        </label>
+      </div>
+
+      <!-- 使い方 -->
+      <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl shadow-lg p-8 mb-8 text-white">
+        <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Discordで画像を直接表示
+        </h2>
+        <div class="space-y-3 text-purple-100">
+          <div class="flex gap-3 items-start">
+            <div class="bg-white bg-opacity-20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold text-white">1</div>
+            <p>画像をアップロードして「画像リンク」をコピー</p>
+          </div>
+          <div class="flex gap-3 items-start">
+            <div class="bg-white bg-opacity-20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold text-white">2</div>
+            <p>Discordのチャットにリンクを貼り付け</p>
+          </div>
+          <div class="flex gap-3 items-start">
+            <div class="bg-white bg-opacity-20 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 font-bold text-white">3</div>
+            <p><strong>リンクが消えて画像だけが表示されます！</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 画像リスト -->
+      <div id="imagesContainer"></div>
+
+      <!-- 空の状態 -->
+      <div id="emptyState" class="text-center py-12">
+        <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="m21 15-5-5L5 21" stroke-width="2"/>
         </svg>
-        Discordで埋め込み表示する方法
-      </h2>
-      <ol class="space-y-3 text-purple-100">
-        <li class="flex gap-3">
-          <span class="font-bold text-white">1.</span>
-          <span>画像をアップロードして「埋め込みリンク」をコピー</span>
-        </li>
-        <li class="flex gap-3">
-          <span class="font-bold text-white">2.</span>
-          <span>Discordのチャットにそのリンクを貼り付け</span>
-        </li>
-        <li class="flex gap-3">
-          <span class="font-bold text-white">3.</span>
-          <span>自動的に画像が表示されます！</span>
-        </li>
-      </ol>
-    </div>
-
-    <!-- 画像リスト -->
-    <div id="imagesContainer"></div>
-
-    <!-- 空の状態 -->
-    <div id="emptyState" class="text-center py-12">
-      <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
-        <circle cx="8.5" cy="8.5" r="1.5"/>
-        <path d="m21 15-5-5L5 21" stroke-width="2"/>
-      </svg>
-      <p class="text-gray-500">まだ画像がアップロードされていません</p>
+        <p class="text-gray-500">まだ画像がアップロードされていません</p>
+      </div>
     </div>
   </div>
 
   <script>
     let images = [];
-    let currentImageId = null;
-
-    function goHome() {
-      window.location.hash = '';
-      location.reload();
-    }
-
-    function getImageIdFromHash() {
-      return window.location.hash.substring(1);
-    }
 
     function loadImages() {
       const stored = localStorage.getItem('imageShareImages');
@@ -157,15 +141,15 @@
         images.sort((a, b) => b.timestamp - a.timestamp);
       }
       
-      const imageId = getImageIdFromHash();
+      const imageId = window.location.hash.substring(1);
       if (imageId) {
-        showImagePage(imageId);
+        showImageOnly(imageId);
       } else {
         renderImages();
       }
     }
 
-    function showImagePage(imageId) {
+    function showImageOnly(imageId) {
       const image = images.find(img => img.id === imageId);
       if (!image) {
         window.location.hash = '';
@@ -173,43 +157,33 @@
         return;
       }
 
-      // メインコンテンツを隠す
-      document.getElementById('uploadSection').classList.add('hidden');
-      document.getElementById('guideSection').classList.add('hidden');
-      document.getElementById('emptyState').style.display = 'none';
-      document.getElementById('imagesContainer').style.display = 'none';
+      // 画像のみモードに切り替え
+      document.body.classList.add('image-only-mode');
+      document.getElementById('embedImage').src = image.data;
+      document.getElementById('embedImage').alt = image.name;
       
-      // 画像表示
-      document.getElementById('imageViewBanner').classList.remove('hidden');
-      document.getElementById('imageDisplay').classList.remove('hidden');
-      document.getElementById('displayedImage').src = image.data;
-      document.getElementById('displayedImage').alt = image.name;
-      document.getElementById('displayedImageName').textContent = image.name;
-      document.getElementById('displayedImageInfo').textContent = 
-        `${formatFileSize(image.size)} • ${new Date(image.timestamp).toLocaleDateString('ja-JP')}`;
-      
-      currentImageId = imageId;
-
-      // OGPタグを更新（Discord埋め込み用）
-      document.getElementById('pageTitle').textContent = image.name;
-      document.getElementById('ogTitle').setAttribute('content', image.name);
-      document.getElementById('ogDescription').setAttribute('content', `${formatFileSize(image.size)} - ImageShareで共有`);
+      // OGPタグを設定（Discord埋め込み用）
+      document.getElementById('pageTitle').textContent = '';
+      document.getElementById('ogTitle').setAttribute('content', '');
       document.getElementById('ogImage').setAttribute('content', image.data);
       document.getElementById('twitterImage').setAttribute('content', image.data);
       
-      // 画像のタイプを設定
       const imageType = image.data.split(';')[0].split(':')[1];
       document.getElementById('ogImageType').setAttribute('content', imageType);
-    }
-
-    function downloadCurrentImage() {
-      const image = images.find(img => img.id === currentImageId);
-      if (image) {
-        const link = document.createElement('a');
-        link.href = image.data;
-        link.download = image.name;
-        link.click();
-      }
+      
+      // テーマカラーを画像から取得（簡易版）
+      const img = new Image();
+      img.src = image.data;
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 1, 1);
+        const pixel = ctx.getImageData(0, 0, 1, 1).data;
+        const color = `#${((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1)}`;
+        document.getElementById('themeColor').setAttribute('content', color);
+      };
     }
 
     function saveImages() {
@@ -257,8 +231,6 @@
         const card = document.createElement('div');
         card.className = 'bg-gray-50 rounded-xl overflow-hidden shadow hover:shadow-md transition-shadow';
         
-        const embedLink = `${window.location.origin}${window.location.pathname}#${image.id}`;
-        
         card.innerHTML = `
           <div class="aspect-video bg-gray-200 flex items-center justify-center overflow-hidden">
             <img src="${image.data}" alt="${image.name}" class="w-full h-full object-cover">
@@ -269,21 +241,23 @@
               ${formatFileSize(image.size)} • ${new Date(image.timestamp).toLocaleDateString('ja-JP')}
             </p>
             <div class="space-y-2">
-              <button onclick="copyEmbedLink('${image.id}')" id="embed-${image.id}" 
-                class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-3 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all text-sm font-bold shadow-lg">
+              <button onclick="copyImageLink('${image.id}')" id="copy-${image.id}" 
+                class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all text-sm font-bold shadow-lg">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="m21 15-5-5L5 21" stroke-width="2"/>
                 </svg>
-                埋め込みリンクをコピー
+                画像リンクをコピー
               </button>
               <div class="flex gap-2">
-                <button onclick="viewImage('${image.id}')" 
-                  class="flex-1 flex items-center justify-center gap-2 bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-medium">
+                <button onclick="previewImage('${image.id}')" 
+                  class="flex-1 flex items-center justify-center gap-2 bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/>
                     <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-width="2"/>
                   </svg>
-                  表示
+                  プレビュー
                 </button>
                 <button onclick="deleteImage('${image.id}')" 
                   class="bg-red-100 text-red-600 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors">
@@ -299,35 +273,31 @@
       });
     }
 
-    function viewImage(imageId) {
-      window.location.hash = imageId;
-      location.reload();
-    }
-
-    function copyEmbedLink(imageId) {
+    function copyImageLink(imageId) {
       const link = `${window.location.origin}${window.location.pathname}#${imageId}`;
       navigator.clipboard.writeText(link);
       
-      const button = document.getElementById(`embed-${imageId}`);
-      const originalHTML = button.innerHTML;
+      const button = document.getElementById(`copy-${imageId}`);
       button.innerHTML = `
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path d="M5 13l4 4L19 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        コピーしました！
+        コピーしました！Discordに貼ってね
       `;
-      button.classList.remove('from-purple-600', 'to-indigo-600', 'hover:from-purple-700', 'hover:to-indigo-700');
-      button.classList.add('from-green-600', 'to-green-600');
+      button.classList.remove('from-indigo-600', 'to-purple-600');
+      button.classList.add('from-green-500', 'to-green-600');
       
       setTimeout(() => {
-        button.innerHTML = originalHTML;
-        button.classList.remove('from-green-600', 'to-green-600');
-        button.classList.add('from-purple-600', 'to-indigo-600', 'hover:from-purple-700', 'hover:to-indigo-700');
-      }, 2000);
+        renderImages();
+      }, 3000);
+    }
+
+    function previewImage(imageId) {
+      window.open(`${window.location.pathname}#${imageId}`, '_blank');
     }
 
     function deleteImage(imageId) {
-      if (confirm('この画像を削除しますか？')) {
+      if (confirm('この画像を削除しますか？Discordに貼ったリンクも使えなくなります。')) {
         images = images.filter(img => img.id !== imageId);
         saveImages();
         renderImages();
