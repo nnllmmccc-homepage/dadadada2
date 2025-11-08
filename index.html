@@ -1,144 +1,379 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>OGP HTML Generator</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="pageTitle">ImageShare - 画像共有サイト</title>
+  
+  <!-- OGP tags for Discord/Twitter embeds -->
+  <meta property="og:type" content="website" id="ogType">
+  <meta property="og:title" content="ImageShare" id="ogTitle">
+  <meta property="og:description" content="" id="ogDescription">
+  <meta property="og:image" content="" id="ogImage">
+  <meta property="og:image:type" content="image/png" id="ogImageType">
+  <meta property="og:image:width" content="1200" id="ogImageWidth">
+  <meta property="og:image:height" content="630" id="ogImageHeight">
+  <meta name="twitter:card" content="summary_large_image" id="twitterCard">
+  <meta name="twitter:image" content="" id="twitterImage">
+  
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;padding:20px;background:#f3f4f6}</style>
+  <style>
+    .animate-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .5; }
+    }
+  </style>
 </head>
-<body class="min-h-screen flex items-start justify-center">
-  <div class="w-full max-w-2xl bg-white rounded-2xl shadow p-6">
-    <h1 class="text-2xl font-bold text-indigo-600 mb-4">OGP HTML ジェネレータ（Discord対応）</h1>
-
-    <p class="text-sm text-gray-600 mb-4">
-      使い方：公開済みの画像URL（例: <code>https://example.com/uploads/cat.jpg</code>）を入力し、
-      「HTML生成」を押すと、Discordが読み取る静的なHTMLファイルをダウンロードできます。
-      ダウンロードしたファイルをあなたのドメインにアップロードして、そのファイルのURLをDiscordに貼ってください。
-    </p>
-
-    <div class="grid gap-3">
-      <label class="text-sm text-gray-700">画像の公開URL（必須）</label>
-      <input id="imgUrl" type="url" placeholder="https://yourdomain.com/uploads/xxxx.jpg"
-             class="w-full border rounded px-3 py-2" />
-
-      <label class="text-sm text-gray-700">タイトル（表示 & OGP）</label>
-      <input id="title" type="text" placeholder="画像タイトル（例：かわいい猫）"
-             class="w-full border rounded px-3 py-2" />
-
-      <label class="text-sm text-gray-700">説明（OGP用）</label>
-      <input id="desc" type="text" placeholder="説明（例：ふわふわの猫）"
-             class="w-full border rounded px-3 py-2" />
-
-      <label class="text-sm text-gray-700">ページファイル名（任意）</label>
-      <input id="filename" type="text" placeholder="例: view-cat.html （指定がなければ view-<timestamp>.html）"
-             class="w-full border rounded px-3 py-2" />
-
-      <div class="flex gap-2 mt-4">
-        <button id="gen" class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">HTML生成</button>
-        <button id="preview" class="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300">プレビュー</button>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+  
+  <div class="max-w-6xl mx-auto p-6">
+    <!-- ヘッダー -->
+    <div class="text-center mb-8">
+      <div class="flex items-center justify-center gap-3 mb-2">
+        <svg class="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="m21 15-5-5L5 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h1 class="text-4xl font-bold text-gray-800">ImageShare</h1>
       </div>
+      <p class="text-gray-600">画像をアップロードしてDiscordで埋め込み表示</p>
+    </div>
 
-      <textarea id="out" class="hidden mt-4 w-full h-44 p-3 font-mono text-sm bg-gray-50 border rounded"></textarea>
-
-      <div id="downloadRow" class="hidden mt-3 flex gap-2">
-        <a id="downloadLink" class="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">ダウンロード（.html）</a>
-        <button id="openLink" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">今すぐ新しいタブで開く</button>
+    <!-- 注意書き -->
+    <div id="imageViewBanner" class="bg-indigo-600 text-white rounded-xl p-6 mb-8 hidden">
+      <div class="flex items-start gap-4">
+        <svg class="w-6 h-6 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke-width="2"/>
+          <path d="M12 16v-4M12 8h.01" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div>
+          <h3 class="font-bold text-lg mb-2">画像表示モード</h3>
+          <p class="text-indigo-100 mb-3">このページは画像を表示しています。Discord等にこのURLを貼ると画像が埋め込み表示されます。</p>
+          <button onclick="goHome()" class="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50 transition-colors">
+            ホームに戻る
+          </button>
+        </div>
       </div>
     </div>
 
-    <hr class="my-6" />
+    <!-- 画像表示エリア（画像ID指定時） -->
+    <div id="imageDisplay" class="bg-white rounded-2xl shadow-2xl overflow-hidden mb-8 hidden">
+      <div class="aspect-video bg-gray-900 flex items-center justify-center">
+        <img id="displayedImage" src="" alt="" class="max-w-full max-h-full object-contain">
+      </div>
+      <div class="p-6">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-1" id="displayedImageName"></h2>
+            <p class="text-sm text-gray-500" id="displayedImageInfo"></p>
+          </div>
+          <button onclick="downloadCurrentImage()" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            ダウンロード
+          </button>
+        </div>
+      </div>
+    </div>
 
-    <p class="text-xs text-gray-500">
-      注意：DiscordはHTMLの<meta property="og:image">を読み取ります。ここで生成されるHTMLは<strong>静的</strong>で、
-      Discordがプレビューを取得するためには生成したHTMLファイルをあなたの公開ドメイン（例: <code>https://yourdomain.com/view-cat.html</code>）に置いてください。
-      （data:URIやlocalStorageの中身はDiscordが読めません）
-    </p>
+    <!-- アップロードエリア -->
+    <div id="uploadSection" class="bg-white rounded-2xl shadow-lg p-8 mb-8">
+      <label class="block cursor-pointer">
+        <input type="file" accept="image/*" id="fileInput" class="hidden">
+        <div class="border-4 border-dashed border-indigo-300 rounded-xl p-12 text-center hover:border-indigo-500 hover:bg-indigo-50 transition-all" id="uploadArea">
+          <svg class="w-16 h-16 mx-auto mb-4 text-indigo-500" id="uploadIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <p class="text-xl font-semibold text-gray-700 mb-2" id="uploadText">
+            クリックして画像を選択
+          </p>
+          <p class="text-sm text-gray-500">
+            PNG, JPG, GIF (最大5MB)
+          </p>
+        </div>
+      </label>
+    </div>
+
+    <!-- 使い方ガイド -->
+    <div id="guideSection" class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl shadow-lg p-8 mb-8 text-white">
+      <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Discordで埋め込み表示する方法
+      </h2>
+      <ol class="space-y-3 text-purple-100">
+        <li class="flex gap-3">
+          <span class="font-bold text-white">1.</span>
+          <span>画像をアップロードして「埋め込みリンク」をコピー</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="font-bold text-white">2.</span>
+          <span>Discordのチャットにそのリンクを貼り付け</span>
+        </li>
+        <li class="flex gap-3">
+          <span class="font-bold text-white">3.</span>
+          <span>自動的に画像が表示されます！</span>
+        </li>
+      </ol>
+    </div>
+
+    <!-- 画像リスト -->
+    <div id="imagesContainer"></div>
+
+    <!-- 空の状態 -->
+    <div id="emptyState" class="text-center py-12">
+      <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <path d="m21 15-5-5L5 21" stroke-width="2"/>
+      </svg>
+      <p class="text-gray-500">まだ画像がアップロードされていません</p>
+    </div>
   </div>
 
   <script>
-    // Helper: sanitize
-    function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+    let images = [];
+    let currentImageId = null;
 
-    // Build static HTML string with OG tags (no JS meta injection)
-    function buildHtml(imgUrl, title, desc){
-      const t = esc(title || '共有画像');
-      const d = esc(desc || '共有された画像です');
-      const i = esc(imgUrl);
-      return `<!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>${t}</title>
-  <meta property="og:type" content="article"/>
-  <meta property="og:title" content="${t}"/>
-  <meta property="og:description" content="${d}"/>
-  <meta property="og:image" content="${i}"/>
-  <meta property="og:url" content=""/>
-  <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="${t}"/>
-  <meta name="twitter:description" content="${d}"/>
-  <meta name="twitter:image" content="${i}"/>
-  <style>body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f3f4f6;margin:0;font-family:Inter,system-ui,Arial}img{max-width:94%;max-height:86vh;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12)}</style>
-</head>
-<body>
-  <img src="${i}" alt="${t}"/>
-</body>
-</html>`;
+    function goHome() {
+      window.location.hash = '';
+      location.reload();
     }
 
-    const imgUrlInput = document.getElementById('imgUrl');
-    const titleInput = document.getElementById('title');
-    const descInput = document.getElementById('desc');
-    const fileInputName = document.getElementById('filename');
-    const outTA = document.getElementById('out');
-    const genBtn = document.getElementById('gen');
-    const previewBtn = document.getElementById('preview');
-    const dlRow = document.getElementById('downloadRow');
-    const dlLink = document.getElementById('downloadLink');
-    const openLink = document.getElementById('openLink');
-
-    function makeFilename(proposed){
-      if(proposed && proposed.trim()) return proposed.trim();
-      return 'view-' + Date.now() + '.html';
+    function getImageIdFromHash() {
+      return window.location.hash.substring(1);
     }
 
-    genBtn.addEventListener('click', () => {
-      const url = imgUrlInput.value.trim();
-      if(!url){
-        alert('画像の公開URLを入力してください。');
-        imgUrlInput.focus();
+    function loadImages() {
+      const stored = localStorage.getItem('imageShareImages');
+      if (stored) {
+        images = JSON.parse(stored);
+        images.sort((a, b) => b.timestamp - a.timestamp);
+      }
+      
+      const imageId = getImageIdFromHash();
+      if (imageId) {
+        showImagePage(imageId);
+      } else {
+        renderImages();
+      }
+    }
+
+    function showImagePage(imageId) {
+      const image = images.find(img => img.id === imageId);
+      if (!image) {
+        window.location.hash = '';
+        location.reload();
         return;
       }
-      // Basic validation for url scheme
-      if(!/^https?:\/\//i.test(url)){
-        if(!confirm('入力されたURLはhttp/httpsではありません。続行しますか？')) return;
+
+      // メインコンテンツを隠す
+      document.getElementById('uploadSection').classList.add('hidden');
+      document.getElementById('guideSection').classList.add('hidden');
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('imagesContainer').style.display = 'none';
+      
+      // 画像表示
+      document.getElementById('imageViewBanner').classList.remove('hidden');
+      document.getElementById('imageDisplay').classList.remove('hidden');
+      document.getElementById('displayedImage').src = image.data;
+      document.getElementById('displayedImage').alt = image.name;
+      document.getElementById('displayedImageName').textContent = image.name;
+      document.getElementById('displayedImageInfo').textContent = 
+        `${formatFileSize(image.size)} • ${new Date(image.timestamp).toLocaleDateString('ja-JP')}`;
+      
+      currentImageId = imageId;
+
+      // OGPタグを更新（Discord埋め込み用）
+      document.getElementById('pageTitle').textContent = image.name;
+      document.getElementById('ogTitle').setAttribute('content', image.name);
+      document.getElementById('ogDescription').setAttribute('content', `${formatFileSize(image.size)} - ImageShareで共有`);
+      document.getElementById('ogImage').setAttribute('content', image.data);
+      document.getElementById('twitterImage').setAttribute('content', image.data);
+      
+      // 画像のタイプを設定
+      const imageType = image.data.split(';')[0].split(':')[1];
+      document.getElementById('ogImageType').setAttribute('content', imageType);
+    }
+
+    function downloadCurrentImage() {
+      const image = images.find(img => img.id === currentImageId);
+      if (image) {
+        const link = document.createElement('a');
+        link.href = image.data;
+        link.download = image.name;
+        link.click();
       }
-      const title = titleInput.value.trim();
-      const desc = descInput.value.trim();
-      const html = buildHtml(url, title, desc);
-      outTA.value = html;
-      outTA.classList.remove('hidden');
-      dlRow.classList.remove('hidden');
+    }
 
-      // prepare download link
-      const filename = makeFilename(fileInputName.value);
-      const blob = new Blob([html], {type: 'text/html'});
-      const blobUrl = URL.createObjectURL(blob);
-      dlLink.href = blobUrl;
-      dlLink.download = filename;
-      openLink.onclick = () => window.open(blobUrl, '_blank');
+    function saveImages() {
+      localStorage.setItem('imageShareImages', JSON.stringify(images));
+    }
+
+    function generateId() {
+      return Math.random().toString(36).substring(2, 10);
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function renderImages() {
+      const container = document.getElementById('imagesContainer');
+      const emptyState = document.getElementById('emptyState');
+
+      if (images.length === 0) {
+        container.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+          <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" stroke-width="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <path d="m21 15-5-5L5 21" stroke-width="2"/>
+            </svg>
+            アップロード済み画像
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="imageGrid"></div>
+        </div>
+      `;
+
+      const grid = document.getElementById('imageGrid');
+      images.forEach(image => {
+        const card = document.createElement('div');
+        card.className = 'bg-gray-50 rounded-xl overflow-hidden shadow hover:shadow-md transition-shadow';
+        
+        const embedLink = `${window.location.origin}${window.location.pathname}#${image.id}`;
+        
+        card.innerHTML = `
+          <div class="aspect-video bg-gray-200 flex items-center justify-center overflow-hidden">
+            <img src="${image.data}" alt="${image.name}" class="w-full h-full object-cover">
+          </div>
+          <div class="p-4">
+            <p class="text-sm font-medium text-gray-700 truncate mb-2">${image.name}</p>
+            <p class="text-xs text-gray-500 mb-3">
+              ${formatFileSize(image.size)} • ${new Date(image.timestamp).toLocaleDateString('ja-JP')}
+            </p>
+            <div class="space-y-2">
+              <button onclick="copyEmbedLink('${image.id}')" id="embed-${image.id}" 
+                class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-3 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all text-sm font-bold shadow-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                埋め込みリンクをコピー
+              </button>
+              <div class="flex gap-2">
+                <button onclick="viewImage('${image.id}')" 
+                  class="flex-1 flex items-center justify-center gap-2 bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-medium">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2"/>
+                    <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-width="2"/>
+                  </svg>
+                  表示
+                </button>
+                <button onclick="deleteImage('${image.id}')" 
+                  class="bg-red-100 text-red-600 px-3 py-2 rounded-lg hover:bg-red-200 transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function viewImage(imageId) {
+      window.location.hash = imageId;
+      location.reload();
+    }
+
+    function copyEmbedLink(imageId) {
+      const link = `${window.location.origin}${window.location.pathname}#${imageId}`;
+      navigator.clipboard.writeText(link);
+      
+      const button = document.getElementById(`embed-${imageId}`);
+      const originalHTML = button.innerHTML;
+      button.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M5 13l4 4L19 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        コピーしました！
+      `;
+      button.classList.remove('from-purple-600', 'to-indigo-600', 'hover:from-purple-700', 'hover:to-indigo-700');
+      button.classList.add('from-green-600', 'to-green-600');
+      
+      setTimeout(() => {
+        button.innerHTML = originalHTML;
+        button.classList.remove('from-green-600', 'to-green-600');
+        button.classList.add('from-purple-600', 'to-indigo-600', 'hover:from-purple-700', 'hover:to-indigo-700');
+      }, 2000);
+    }
+
+    function deleteImage(imageId) {
+      if (confirm('この画像を削除しますか？')) {
+        images = images.filter(img => img.id !== imageId);
+        saveImages();
+        renderImages();
+      }
+    }
+
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        alert('画像ファイルを選択してください');
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        alert('ファイルサイズは5MB以下にしてください');
+        return;
+      }
+
+      document.getElementById('uploadText').textContent = 'アップロード中...';
+      document.getElementById('uploadIcon').classList.add('animate-pulse');
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const imageData = {
+          id: generateId(),
+          data: event.target.result,
+          name: file.name,
+          timestamp: Date.now(),
+          size: file.size
+        };
+
+        images.unshift(imageData);
+        saveImages();
+        renderImages();
+
+        document.getElementById('uploadText').textContent = 'クリックして画像を選択';
+        document.getElementById('uploadIcon').classList.remove('animate-pulse');
+        e.target.value = '';
+      };
+
+      reader.readAsDataURL(file);
     });
 
-    previewBtn.addEventListener('click', () => {
-      const url = imgUrlInput.value.trim();
-      if(!url){ alert('画像の公開URLを入力してください。'); return; }
-      // Quick in-page preview
-      const win = window.open();
-      win.document.write(buildHtml(url, titleInput.value.trim(), descInput.value.trim()));
-      win.document.close();
-    });
+    loadImages();
   </script>
 </body>
 </html>
